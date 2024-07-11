@@ -65,12 +65,13 @@ def init_routes(app):
             db.session.commit()
 
         # Add sets if provided
-        if 'sets' in data:
-            for set_data in data['sets']:
+        if 'sets' in data and data['sets']:
+            sets_data = data['sets']
+            for set_data in sets_data:
                 new_set = Set(
-                    weight=set_data['weight'],
-                    reps=set_data['reps'],
-                    session_id=set_data['session_id'],
+                    weight=set_data.get('weight', 0),
+                    reps=set_data.get('reps', 0),
+                    session_id=set_data.get('session_id'),
                     exercise_id=new_exercise.id
                 )
                 db.session.add(new_set)
@@ -87,7 +88,23 @@ def init_routes(app):
             return jsonify(exercise.to_dict()), 201
             #return jsonify(exercise), 200
         else:
-            return "Exercise does not exist"
+            return jsonify({'message': 'Exercise does not exist'}), 404
+        
+    @app.route('/searchexercise', methods = ['GET'])
+    def search_exercise():
+        name = request.args.get('name')
+        if name:
+            exercise = Exercise.query.filter_by(name=name).first()
+            if exercise:
+                return jsonify({
+                    'name': exercise.name,
+                    'muscle_group': exercise.muscle_group,
+                    'sets': [set.to_dict() for set in exercise.set_entries]
+                })
+            else:
+                return jsonify({'message': 'Exercise not found'}), 404
+        else:
+            return jsonify({'message': 'Name parameter is required'}), 400
         
     @app.route('/deleteexercise', methods = ['DELETE'])
     def delete_exercise():
