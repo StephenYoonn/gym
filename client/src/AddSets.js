@@ -53,7 +53,7 @@ const AddSets = () => {
         try {
             await axios.post('/sets', {
                 ...setFormData,
-                exercise_id: exercise.id
+                exercise_name:exercise.name
             }, {
                 headers: {
                     'Content-Type': 'application/json'

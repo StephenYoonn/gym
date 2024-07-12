@@ -132,9 +132,11 @@ def init_routes(app):
     @app.route('/sets', methods=['POST'])
     def create_set():
         data = request.get_json()
-        exercise_search = Exercise.query.filter_by(name = data['exercise_name'].strip().lower())
+        exercise_search = Exercise.query.filter_by(name = data['exercise_name'].strip().lower()).first()
 
+      
         if(exercise_search):
+            newid = exercise_search.id
             new_set = Set(
                 weight=data['weight'],
                 reps=data['reps'],
