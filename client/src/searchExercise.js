@@ -24,7 +24,7 @@ const SearchExercise = ({setResults, setError}) => {
 
         //get request made to url using axios and sends in params
         try{
-            const response = await axios.get('http://localhost:5000/searchexercise',  {
+            const response = await axios.get('/searchexercise',  {
                 headers:{
                     'Content-Type': 'application/json'
                 },

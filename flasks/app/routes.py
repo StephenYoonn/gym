@@ -1,8 +1,10 @@
-from flask import request, jsonify
+from flask import request, jsonify, redirect, url_for
 from . import db
 from .models import User, Exercise, Session, Set
 from flask_cors import CORS
 from flask_cors import cross_origin
+from flask_login import login_user, logout_user, login_required, current_user
+from werkzeug.security import check_password_hash, generate_password_hash
 import re
 #from .models import to_dict
 
@@ -10,9 +12,24 @@ import re
 def init_routes(app):
 
     #################################### USERS ######################################
+    @app.route('/login', methods = ['POST'])
+    def login():
+        data = request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+        user = User.query.filter_by(email=email).first()
+
+        if user and check_password_hash(user.password, password):
+            login_user(user, remember=True)
+            return jsonify({'message':'Login Successful'}), 200
+        else:
+            return jsonify({'message':'Login unsuccessful'}), 401
+
+
+
 
     @app.route("/user",methods = ["POST","GET"])
-    @cross_origin()
+    #@cross_origin()
     def user():
         data = request.get_json()
 
@@ -21,10 +38,11 @@ def init_routes(app):
             print("User Already Exists")
             return jsonify({'message': f'User with email {data['email']} already exists'}), 201
 
+        hashed_password = generate_password_hash(data.get('password'), method ='pbkdf2:sha256')
         newuser = User(
             name = data['name'],
             email = data['email'],
-            password = data['password']
+            password = hashed_password
             
         )
         db.session.add(newuser)
@@ -43,9 +61,28 @@ def init_routes(app):
             return jsonify({'message': 'User does not exist'})
     #################################### SESSIONS ######################################
 
+    @app.route('/session', methods = ['GET', 'POST'])
+    def session():
+        data = request.get_json()
+        search = Session.query.filter_by(date = data['date']).first()
+
+        if (search):
+            current_id = search.id
+            return jsonify({'sessionid':current_id})
+        else:
+            new_session = Session(
+                userid = data.get("userid"),
+                date = data['date']
+            )
+        
+            db.session.add(new_session)
+            db.session.commit()
+
+            return jsonify({'sessionid':new_session.id})
 
     #################################### EXERCISES ######################################
     @app.route('/exercise', methods=['POST'])
+    #@login_required
     def create_exercise():
         # Implementation
         data = request.get_json()
@@ -71,16 +108,18 @@ def init_routes(app):
                 new_set = Set(
                     weight=set_data.get('weight', 0),
                     reps=set_data.get('reps', 0),
-                    session_id=set_data.get('session_id'),
                     exercise_id=new_exercise.id
                 )
+                
                 db.session.add(new_set)
 
         db.session.commit()
         return jsonify({'message': 'Exercise created'}), 201
 
     @app.route('/getexercise', methods=['GET'])
+    #@login_required
     def get_exercise():
+
         data = request.get_json()
         exercise = Exercise.query.filter_by(name = f"{data['name']}").first()
 
@@ -91,6 +130,7 @@ def init_routes(app):
             return jsonify({'message': 'Exercise does not exist'}), 404
         
     @app.route('/searchexercise', methods = ['GET'])
+    #@login_required
     def search_exercise():
         name = request.args.get('name')
         if name:
@@ -99,7 +139,7 @@ def init_routes(app):
                 return jsonify({
                     'name': exercise.name,
                     'muscle_group': exercise.muscle_group,
-                    'sets': [set.to_dict() for set in exercise.set_entries]
+                    'session_id': exercise.session_id
                 })
             else:
                 return jsonify({'message': 'Exercise not found'}), 404
@@ -107,6 +147,7 @@ def init_routes(app):
             return jsonify({'message': 'Name parameter is required'}), 400
         
     @app.route('/deleteexercise', methods = ['DELETE'])
+    #@login_required
     def delete_exercise():
         data = request.get_json()
         exercise = Exercise.query.filter_by(name = data['name']).first()
@@ -130,19 +171,25 @@ def init_routes(app):
  
 
     @app.route('/sets', methods=['POST'])
+    #@login_required
     def create_set():
         data = request.get_json()
         exercise_search = Exercise.query.filter_by(name = data['exercise_name'].strip().lower()).first()
-
+        session_id_date=Exercise.query.filter_by(date = data['date'])
       
         if(exercise_search):
-            newid = exercise_search.id
-            new_set = Set(
-                weight=data['weight'],
-                reps=data['reps'],
-                session_id=data['session_id'],
-                exercise_id= exercise_search.id
-            )
+            if(session_id_date):
+                new_set = Set(
+                    weight=data['weight'],
+                    reps=data['reps'],
+                    exercise_id= exercise_search.id
+                )
+            else:
+                new_set = Set(
+                    weight=data['weight'],
+                    reps=data['reps'],
+                    exercise_id= exercise_search.id
+                )
         else:
             #print would you like to create new exercise, search by similarity
             #1: search by first few letters of all exercises?

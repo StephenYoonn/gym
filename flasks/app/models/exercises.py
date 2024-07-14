@@ -6,8 +6,10 @@ class Exercise(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     muscle_group = db.Column(db.String(100), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('sessions.id'))
 
     sets = db.relationship('Set', backref='exercise_ref')
+
     def to_dict(self):
         return {
             'id': self.id,

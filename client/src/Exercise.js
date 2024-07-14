@@ -9,7 +9,8 @@ const Exercise = () => {
     const [formData, setFormData] = useState({
         name: '',
         muscle_group: '',
-        sets: []
+        sets: [],
+        date:''
     });
 
     const [message, setMessage] = useState('');
@@ -67,6 +68,15 @@ const Exercise = () => {
         }
     };
 
+    const setTodayDate = () => {
+        const today = new Date().toISOString().split('T')[0];
+        setFormData((prevData) => ({
+          ...prevData,
+          date: today,
+        }));
+      };
+    
+
     return (
         <div>
             <form onSubmit={handleSubmit}>
@@ -98,6 +108,21 @@ const Exercise = () => {
                         ))}
                     </select>
 
+                    <label htmlFor="date">Date</label>
+                        <input
+                            type="date"
+                            id="date"
+                            name="date"
+                            value={formData.date}
+                            onChange={handleChange}
+                            className="form-control"
+                            placeholder="Enter Date"
+                            autoComplete="off"
+                        />
+                        <button type="button" onClick={setTodayDate}>
+                            Today
+                        </button>
+
                     <br />
                     <br />
 
@@ -126,17 +151,7 @@ const Exercise = () => {
                                 placeholder="Enter Reps"
                                 autoComplete="off"
                             />
-                            <label htmlFor={`session_id-${index}`}>Session ID</label>
-                            <input
-                                type="number"
-                                id={`session_id-${index}`}
-                                name="session_id"
-                                value={set.session_id}
-                                onChange={(e) => handleSetChange(index, e)}
-                                className="form-control"
-                                placeholder="Enter Session ID"
-                                autoComplete="off"
-                            />
+                           
                         </div>
                     ))}
                     <button type="button" onClick={addSet} className="btn btn-secondary">Add Set</button>
@@ -160,7 +175,7 @@ const Exercise = () => {
                             <h3>Exercise Details</h3>
                             <p><strong>Name:</strong> {results.name}</p>
                             <p><strong>Muscle Group:</strong> {results.muscle_group}</p>
-                            <p><strong>Sets:</strong> {results.sets ? results.sets.length : 0}</p>
+                          {/* <p><strong>Sets:</strong> {exercise.sets ? exercise.sets.length : 0}</p>  */}
                         </>
                     )}
                 </div>

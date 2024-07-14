@@ -14,7 +14,7 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Login/>} /> {/* Set Signup as the home page */}
-          <Route path="/signup" element={<Signup />} /> {/* Route for the signup page */}
+          <Route path="/user" element={<Signup />} /> {/* Route for the signup page */}
           <Route path="/exercise" element={<Exercise />} />{/* Route for the signup page */}
           {/* Add more routes as needed */}
         </Routes>

@@ -35,7 +35,7 @@ const Login = () => {
   };
 
   const navigateToSignup = () => {
-    navigate('/signup'); // Navigate to the signup page
+    navigate('/user'); // Navigate to the signup page
   };
 
   
