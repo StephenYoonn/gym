@@ -11,6 +11,8 @@ const Layout = ({ children }) => {
             <li><Link to="/">Home</Link></li>
             <li><Link to="/user">Sign Up</Link></li>
             <li><Link to="/exercise">Exercise</Link></li>
+            <li><Link to="/oldexercise">Old Exercise</Link></li>
+            <li><Link to="/log">Log Session</Link></li>
             {/* Add more links as needed */}
           </ul>
       

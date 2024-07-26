@@ -1,3 +1,4 @@
+import datetime
 from flask import request, jsonify, redirect, url_for
 from . import db
 from .models import User, Exercise, Session, Set
@@ -202,9 +203,83 @@ def init_routes(app):
 
         return jsonify(new_set.to_dict()), 201
     
+        #################################### Taking in Notes ######################################
     
+    @app.route('/log', methods=['POST'])
+    def log():
+        data = request.get_json()
+        notes = data.get('notes', '')
+        date_str = data.get('date', '')
+        #user_id = current_user.id
+
+        # Convert the date string to a date object
+        try:
+            current_date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'message': 'Invalid date format'}), 400
+
+        set_pattern = re.compile(r'(\d+(\.\d+)?[a-zA-Z]*)')
+        lines = notes.split('\n')
+        current_muscle_group = None
+        current_exercise = None
+
+        # Create or get the current session for the user
+        current_session = Session.query.filter_by( date=current_date).first()
+        if not current_session:
+            current_session = Session( date=current_date)
+            db.session.add(current_session)
+            db.session.commit()
+
+        for line in lines:
+            line = line.strip()
+
+            if '->' in line:
+                # This line contains a muscle group and exercise
+                parts = line.split('->')
+                current_muscle_group = parts[0].strip()
+                current_exercise_name = parts[1].strip().lower()
+                print('current exercise name: ' + current_exercise_name)
+                current_exercise = Exercise.query.filter_by(name=current_exercise_name, muscle_group=current_muscle_group,session_id=current_session.id).first()
+
+                if not current_exercise:
+                    current_exercise = Exercise(name=current_exercise_name, muscle_group=current_muscle_group,session_id=current_session.id)
+                    db.session.add(current_exercise)
+                    db.session.commit()
+
+            elif set_pattern.findall(line):
+                # This line contains sets
+                set_details = set_pattern.findall(line)
+                for set_detail in set_details:
+                    weight_reps = set_detail[0].split('.')
+                    weight = int(weight_reps[0])
+                    reps = int(weight_reps[1]) if len(weight_reps) > 1 else 0
+                    failure = 'f' in set_detail[0]
+                    dropset = 'ds' in set_detail[0]
+                    partial = 'p' in set_detail[0]
+
+                    # Create a new set
+                    new_set = Set(
+                        weight=weight,
+                        reps=reps,
+                        failure=failure,
+                        dropset_weight=weight if dropset else None,
+                        dropset_reps=reps if dropset else None,
+                        partial_reps=reps if partial else None,
+                        exercise_id=current_exercise.id,
+                        #session_id=current_session.id
+                    )
+                    db.session.add(new_set)
+                    db.session.commit()
+
+        return jsonify({'message': "Workout logged successfully"})
+
+
 
     # Similar endpoints for update and delete, and for sessions
+
+
+    #################################### Visualization ######################################
+
 
     
 

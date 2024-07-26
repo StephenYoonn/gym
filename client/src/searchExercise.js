@@ -21,10 +21,10 @@ const SearchExercise = ({setResults, setError}) => {
 
     const handleSubmit = async(e) => {
         e.preventDefault();
-
+            
         //get request made to url using axios and sends in params
         try{
-            const response = await axios.get('/searchexercise',  {
+            const response = await axios.get('http://localhost:5000/searchexercise',  {
                 headers:{
                     'Content-Type': 'application/json'
                 },
@@ -45,9 +45,14 @@ const SearchExercise = ({setResults, setError}) => {
                 setError('');
             }
         } catch (error){
+
+            
             //console message when catching error, setting error and results
-            console.error('Error fetching exercise:', error);
-            setError('There was an error fetching the exercise');
+            if (error.response && error.response.data && error.response.data.message) {
+                setError(error.response.data.message);
+            } else {
+                setError('There was an error fetching the exercise');
+            }
             setResults(null);
         }
     };
@@ -66,6 +71,8 @@ const SearchExercise = ({setResults, setError}) => {
                 className="form-control"
                 placeholder="Enter Exercise Name"
             />
+
+            
             </div>
             <div className="form-group" align="center">
             <button type="submit" className="btn">Search</button>

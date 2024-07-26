@@ -6,18 +6,21 @@ import SearchExercise from './searchExercise';
 import AddSets from './AddSets';
 
 const Exercise = () => {
-    const [formData, setFormData] = useState({
-        name: '',
-        muscle_group: '',
-        sets: [],
-        date:''
-    });
-
-    const [message, setMessage] = useState('');
+    const [exerciseName, setExerciseName] = useState('');
+    const [exercise, setExercise] = useState(null);
+    const [sessionDate, setSessionDate] = useState('');
     const [muscleGroups, setMuscleGroups] = useState([]);
-    const [results, setResults] = useState(null);
+    const [selectedMuscleGroup, setSelectedMuscleGroup] = useState('');
+    const [session, setSession] = useState(null);
+    const [setFormData, setSetFormData] = useState({
+        weight: '',
+        reps: '',
+       
+
+    });
     const [error, setError] = useState('');
-    const navigate = useNavigate();
+
+
 
     useEffect(() => {
         axios.get('/getmusclegroups').then(response => {
@@ -27,163 +30,214 @@ const Exercise = () => {
         });
     }, []);
 
-    const handleChange = (e) => {
+    const handleSessionChange = (e) => {
+        setSessionDate(e.target.value);
+    };
+
+    const handleExerciseChange = (e) => {
+        setExerciseName(e.target.value);
+    };
+
+    const handleSetChange = (e) => {
         const { name, value } = e.target;
-        setFormData({
-            ...formData,
+        setSetFormData({
+            ...setFormData,
             [name]: value
         });
     };
 
-    const handleSetChange = (index, e) => {
-        const { name, value } = e.target;
-        const newSets = formData.sets.map((set, i) => {
-            if (i === index) {
-                return { ...set, [name]: value };
-            }
-            return set;
-        });
-        setFormData({ ...formData, sets: newSets });
-    };
+    const handleMuscleGroupChange = (e) => {
+        setSelectedMuscleGroup(e.target.value);
+    }
 
-    const addSet = () => {
-        setFormData({
-            ...formData,
-            sets: [...formData.sets, { weight: '', reps: '', session_id: '' }]
-        });
-    };
-
-    const handleSubmit = async (e) => {
+    const handleSessionSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('/exercise', formData, {
+            const response = await axios.post('http://localhost:5000/session', {
+                date: sessionDate
+            }, {
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
-            setMessage(response.data.message);
+            setSession(response.data);
+            setError('');
         } catch (error) {
-            setMessage('There was an error adding this exercise');
-            console.error('There was an error creating this exercise', error);
+            console.error('Error fetching or creating session:', error);
+            setError('There was an error fetching or creating the session');
+        }
+    };
+
+    const handleExerciseSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await axios.get('http://localhost:5000/searchexercise', {
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                params: {
+                    name: exerciseName.trim().toLowerCase()
+                }
+            });
+            if (response.data.message) {
+                setExercise(null);
+                setError(response.data.message);
+            } else {
+                setExercise(response.data);
+                setError('');
+            }
+        } catch (error) {
+            console.error('Error fetching exercise:', error);
+            setError('There was an error fetching the exercise');
+            setExercise(null);
+        }
+    };
+
+    const handleSetSubmit = async (e) => {
+        e.preventDefault();
+
+
+        let session_id;
+        try {
+            const sessionResponse = await axios.post('http://localhost:5000/session', {
+                date: setFormData.date
+            }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            session_id = sessionResponse.data.session_id;
+        } catch (error) {
+            console.error('Error fetching or creating session:', error);
+            setError('There was an error fetching or creating the session');
+            return;
+        }
+
+        try {
+            await axios.post('/sets', {
+                ...setFormData,
+                exercise_name:exercise.name,
+                session_id: session_id
+            }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            setError('');
+            alert('Set added successfully');
+        } catch (error) {
+            console.error('Error adding set:', error);
+            setError('There was an error adding the set');
         }
     };
 
     const setTodayDate = () => {
         const today = new Date().toISOString().split('T')[0];
-        setFormData((prevData) => ({
-          ...prevData,
-          date: today,
-        }));
+        setSessionDate(today);
       };
     
 
-    return (
+      return (
         <div>
-            <form onSubmit={handleSubmit}>
-                <h3 align="center">Add Exercise</h3>
+            <h3 align="center">Find or Create Session</h3>
+            <form onSubmit={handleSessionSubmit}>
                 <div className="form-group" align="center">
-                    <label htmlFor="name">Name</label>
+                    <label htmlFor="sessionDate">Session Date</label>
                     <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
+                        type="date"
+                        id="sessionDate"
+                        name="sessionDate"
+                        value={sessionDate}
+                        onChange={handleSessionChange}
                         className="form-control"
-                        placeholder="Enter Name"
-                        autoComplete="off"
                     />
+                    <button type="button" onClick={setTodayDate} className="btn btn-secondary">Today</button>
+                </div>
+                <div className="form-group" align="center">
+                    <button type="submit" className="btn">Find/Create Session</button>
+                </div>
+            </form>
 
-                    <label htmlFor="muscle_group">Muscle Group</label>
-                    <select
-                        id="muscle_group"
-                        name="muscle_group"
-                        value={formData.muscle_group}
-                        onChange={handleChange}
-                        className="form-control"
-                    >
-                        <option value="">Select Muscle Group</option>
-                        {muscleGroups.map((group, index) => (
-                            <option key={index} value={group}>{group}</option>
-                        ))}
-                    </select>
+            {session && (
+                <>
+                    <h3 align="center">Find or Create Exercise</h3>
+                    <form onSubmit={handleExerciseSubmit}>
+                        <div className="form-group" align="center">
+                            <label htmlFor="exerciseName">Exercise Name</label>
+                            <input
+                                type="text"
+                                id="exerciseName"
+                                name="exerciseName"
+                                value={exerciseName}
+                                onChange={handleExerciseChange}
+                                className="form-control"
+                                placeholder="Enter Exercise Name"
+                            />
+                            <label htmlFor="muscle_group">Muscle Group</label>
+                            <select
+                                id="muscle_group"
+                                name="muscle_group"
+                                value={selectedMuscleGroup}
+                                onChange={handleMuscleGroupChange}
+                                className="form-control"
+                            >
+                                <option value="">Select Muscle Group</option>
+                                {muscleGroups.map((group, index) => (
+                                    <option key={index} value={group}>{group}</option>
+                                ))}
+                            </select>
+                        </div>
+                     
 
-                    <label htmlFor="date">Date</label>
-                        <input
-                            type="date"
-                            id="date"
-                            name="date"
-                            value={formData.date}
-                            onChange={handleChange}
-                            className="form-control"
-                            placeholder="Enter Date"
-                            autoComplete="off"
-                        />
-                        <button type="button" onClick={setTodayDate}>
-                            Today
-                        </button>
+                        
 
-                    <br />
-                    <br />
+                        <div className="form-group" align="center">
+                            <button type="submit" className="btn">Search Exercise</button>
+                        </div>
+                    </form>
+                </>
+            )}
 
-                    <label htmlFor="sets">Sets &#40;Optional&#41;</label>
-                    {formData.sets.map((set, index) => (
-                        <div key={index} className="form-group">
-                            <label htmlFor={`weight-${index}`}>Weight</label>
+            {exercise && (
+                <div align="center">
+                    <h3>Exercise Details</h3>
+                    <p><strong>Name:</strong> {exercise.name}</p>
+                    <p><strong>Muscle Group:</strong> {exercise.muscle_group}</p>
+
+                    <form onSubmit={handleSetSubmit}>
+                        <div className="form-group" align="center">
+                            <label htmlFor="weight">Weight</label>
                             <input
                                 type="number"
-                                id={`weight-${index}`}
+                                id="weight"
                                 name="weight"
-                                value={set.weight}
-                                onChange={(e) => handleSetChange(index, e)}
+                                value={setFormData.weight}
+                                onChange={handleSetChange}
                                 className="form-control"
                                 placeholder="Enter Weight"
                                 autoComplete="off"
                             />
-                            <label htmlFor={`reps-${index}`}>Reps</label>
+                            <label htmlFor="reps">Reps</label>
                             <input
                                 type="number"
-                                id={`reps-${index}`}
+                                id="reps"
                                 name="reps"
-                                value={set.reps}
-                                onChange={(e) => handleSetChange(index, e)}
+                                value={setFormData.reps}
+                                onChange={handleSetChange}
                                 className="form-control"
                                 placeholder="Enter Reps"
                                 autoComplete="off"
                             />
-                           
                         </div>
-                    ))}
-                    <button type="button" onClick={addSet} className="btn btn-secondary">Add Set</button>
-
-                    <br />
-
-                    <div style={{ padding: "20px", display: 'flex', justifyContent: 'center', gap: '20px', align: 'center' }}>
-                        <button className="btn btn-primary" type="submit">Enter Exercise</button>
-                    </div>
+                        <div className="form-group" align="center">
+                            <button type="submit" className="btn">Add Set</button>
+                        </div>
+                    </form>
                 </div>
-            </form>
-            {message && <p>{message}</p>}
+            )}
 
-            <div>
-                <h3 align="center">Search for Existing Exercises</h3>
-                <SearchExercise setResults={setResults} setError={setError} />
-                <div id="results" align="center">
-                    {error && <p>{error}</p>}
-                    {results && (
-                        <>
-                            <h3>Exercise Details</h3>
-                            <p><strong>Name:</strong> {results.name}</p>
-                            <p><strong>Muscle Group:</strong> {results.muscle_group}</p>
-                          {/* <p><strong>Sets:</strong> {exercise.sets ? exercise.sets.length : 0}</p>  */}
-                        </>
-                    )}
-                </div>
-            </div>
-            <div>
-                <h3 align="center">Add Sets to an Existing Exercise</h3>
-                <AddSets setResults={setResults} setError={setError} />
-            </div>
+            {error && <p>{error}</p>}
         </div>
     );
 };
