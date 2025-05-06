@@ -6,6 +6,8 @@ const LogSession = () =>{
     const[notes, setNotes] = useState('');
     const[date, setDate] = useState('');
     const[message, setMessage] = useState('');
+    const [email, setEmail] = useState('');
+
 
     const handleNotesChange = (e) => {
         setNotes(e.target.value);
@@ -15,6 +17,9 @@ const LogSession = () =>{
     };
     const handleMessageChange = (e) => {
         setMessage(e.target.value);
+    };
+    const handleEmailChange = (e) => {
+        setEmail(e.target.value);
     };
     const setTodayDate = () => {
         const today = new Date().toISOString().split('T')[0];
@@ -27,7 +32,8 @@ const LogSession = () =>{
         try{
             const response = await axios.post('http://localhost:5000/log',{
                 date: date,
-                notes: notes
+                notes: notes,
+                email: email
             }, {headers: {'Content-Type':'application/json'}}
         ); setMessage(response.data.message);
         } catch(error){
@@ -52,6 +58,19 @@ const LogSession = () =>{
                         
                     />
                     <button type="button" onClick={setTodayDate} className="btn btn-secondary">Today</button>
+
+                    <br></br>
+
+                    <label htmlFor="email">Email</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={email}
+                        onChange={handleEmailChange}
+                        className="form-control"
+                        placeholder="Enter Email"
+                    />
 
                     <br></br>
                 

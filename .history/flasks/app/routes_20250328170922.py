@@ -70,21 +70,21 @@ def init_routes(app):
         return jsonify([user.to_dict() for user in users])
     
     @app.route('/reset-password', methods=['POST'])
-    def reset_password():
-        data = request.get_json()
-        email = data.get('email')
+def reset_password():
+    data = request.get_json()
+    email = data.get('email')
 
-        if not email:
-            return jsonify({"message": "Email is required!"}), 400
+    if not email:
+        return jsonify({"message": "Email is required!"}), 400
 
-        # Check if email exists (simulate DB check)
-        if email not in users:
-            return jsonify({"message": "Email not found!"}), 404
+    # Check if email exists (simulate DB check)
+    if email not in users:
+        return jsonify({"message": "Email not found!"}), 404
 
-        # Simulate sending email (in real app, use SendGrid, SMTP, etc.)
-        print(f"Password reset link sent to {email}")
+    # Simulate sending email (in real app, use SendGrid, SMTP, etc.)
+    print(f"Password reset link sent to {email}")
 
-        return jsonify({"message": f"A password reset link has been sent to {email}."}), 200
+    return jsonify({"message": f"A password reset link has been sent to {email}."}), 200
 
     #################################### SESSIONS ######################################
 

@@ -6,6 +6,7 @@ import Login from './Login'
 import Exercise from './Exercise'
 import OldExercise from './OldExercise'
 import LogSession from './LogSession';
+import VisualizationRecharts from './VisualizationRecharts';
 
 
 
@@ -20,6 +21,7 @@ function App() {
           <Route path="/exercise" element={<Exercise />} />{/* Route for the signup page */}
           <Route path="/oldexercise" element={<OldExercise />} />{/* Route for the signup page */}
           <Route path="/log" element={<LogSession />} />{/* Route for the signup page */}
+          <Route path="/visualization" element={<VisualizationRecharts />} />{/* Route for the signup page */}
           {/* Add more routes as needed */}
         </Routes>
       </Layout>

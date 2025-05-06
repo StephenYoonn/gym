@@ -13,6 +13,7 @@ const Layout = ({ children }) => {
             <li><Link to="/exercise">Exercise</Link></li>
             <li><Link to="/oldexercise">Old Exercise</Link></li>
             <li><Link to="/log">Log Session</Link></li>
+            <li><Link to="/visualization">Visualization</Link></li>
             {/* Add more links as needed */}
           </ul>
       

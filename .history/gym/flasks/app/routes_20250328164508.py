@@ -7,9 +7,6 @@ from flask_cors import cross_origin
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 import re
-from sqlalchemy import func
-from datetime import datetime
-
 #from .models import to_dict
 
 
@@ -64,56 +61,31 @@ def init_routes(app):
         else:
             return jsonify({'message': 'User does not exist'})
         
-    @app.route('/getallusers', methods=['GET'])
+
+    @app.route('/getusers', methods=['GET'])
     def get_all_users():
         users = User.query.all()
         return jsonify([user.to_dict() for user in users])
-    
-    @app.route('/reset-password', methods=['POST'])
-    def reset_password():
-        data = request.get_json()
-        email = data.get('email')
-
-        if not email:
-            return jsonify({"message": "Email is required!"}), 400
-
-        # Check if email exists (simulate DB check)
-        if email not in users:
-            return jsonify({"message": "Email not found!"}), 404
-
-        # Simulate sending email (in real app, use SendGrid, SMTP, etc.)
-        print(f"Password reset link sent to {email}")
-
-        return jsonify({"message": f"A password reset link has been sent to {email}."}), 200
-
-    #################################### SESSIONS ######################################
-
     #################################### SESSIONS ######################################
 
     @app.route('/session', methods = ['GET', 'POST'])
     def session():
         data = request.get_json()
-        date_str = data.get('date')
-        email_str = data.get('email')
-        user_id = User.query.filter_by(email = email_str).first().id
-        # Convert the date string to a date object
-        try:
-            date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
-        except ValueError:
-            return jsonify({'message': 'Invalid date format'}), 400
+        search = Session.query.filter_by(date = data['date']).first()
 
-        search = Session.query.filter_by(date=date_obj, userid=user_id).first()
-
-        if search:
-            return jsonify({'sessionid': search.id})
+        if (search):
+            current_id = search.id
+            return jsonify({'sessionid':current_id})
         else:
             new_session = Session(
-                userid=user_id,
-                date=date_obj
+                userid = data.get("userid"),
+                date = data['date']
             )
+        
             db.session.add(new_session)
             db.session.commit()
-            return jsonify({'sessionid': new_session.id})
+
+            return jsonify({'sessionid':new_session.id})
 
     #################################### EXERCISES ######################################
     @app.route('/exercise', methods=['POST'])
@@ -195,18 +167,9 @@ def init_routes(app):
         
     @app.route('/getmusclegroups', methods = ['GET'])
     def get_muscle_groups():
-        muscle_groups = ['chest', 'back', 'legs', 'triceps', 'biceps', 'shoulders', 'core', 'forearms']
+        muscle_groups = ['Chest', 'Back', 'Legs', 'Triceps', 'Biceps', 'Shoulders', 'Core', 'Forearm']
         return jsonify(muscle_groups)
 
-    @app.route('/getexercises', methods=['GET'])
-    def get_exercises():
-        muscle_group = request.args.get('muscle_group')
-        if not muscle_group:
-            return jsonify({'message': 'Muscle group parameter is required'}), 400
-
-        exercises = db.session.query(Exercise.name).filter_by(muscle_group=muscle_group).distinct().all()
-        exercises_list = [exercise[0] for exercise in exercises]
-        return jsonify(exercises_list)
 
 
 
@@ -253,30 +216,23 @@ def init_routes(app):
         data = request.get_json()
         notes = data.get('notes', '')
         date_str = data.get('date', '')
-        email = data.get('email', '')
         #user_id = current_user.id
 
         # Convert the date string to a date object
         try:
-            current_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-
-            print(current_date)
+            current_date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
             return jsonify({'message': 'Invalid date format'}), 400
 
-
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            return jsonify({'message': 'User not found'}), 404
         set_pattern = re.compile(r'(\d+(\.\d+)?[a-zA-Z]*)')
         lines = notes.split('\n')
         current_muscle_group = None
         current_exercise = None
 
         # Create or get the current session for the user
-        current_session = Session.query.filter_by(userid=user.id, date=current_date).first()
+        current_session = Session.query.filter_by( date=current_date).first()
         if not current_session:
-            current_session = Session(userid=user.id, date=current_date)
+            current_session = Session( date=current_date)
             db.session.add(current_session)
             db.session.commit()
 
@@ -286,7 +242,7 @@ def init_routes(app):
             if '->' in line:
                 # This line contains a muscle group and exercise
                 parts = line.split('->')
-                current_muscle_group = parts[0].strip().lower()
+                current_muscle_group = parts[0].strip()
                 current_exercise_name = parts[1].strip().lower()
                 print('current exercise name: ' + current_exercise_name)
                 current_exercise = Exercise.query.filter_by(name=current_exercise_name, muscle_group=current_muscle_group,session_id=current_session.id).first()
@@ -297,14 +253,10 @@ def init_routes(app):
                     db.session.commit()
 
             elif set_pattern.findall(line):
-            # This line contains sets
+                # This line contains sets
                 set_details = set_pattern.findall(line)
                 for set_detail in set_details:
                     weight_reps = set_detail[0].split('.')
-                    print(weight_reps)
-                    if str(weight_reps[-1]).endswith('p'):
-                        # Skip this set as it contains partial reps
-                        continue
                     weight = int(weight_reps[0])
                     reps = int(weight_reps[1]) if len(weight_reps) > 1 else 0
                     failure = 'f' in set_detail[0]
@@ -320,7 +272,7 @@ def init_routes(app):
                         dropset_reps=reps if dropset else None,
                         partial_reps=reps if partial else None,
                         exercise_id=current_exercise.id,
-                        # session_id=current_session.id
+                        #session_id=current_session.id
                     )
                     db.session.add(new_set)
                     db.session.commit()
@@ -334,85 +286,6 @@ def init_routes(app):
 
     #################################### Visualization ######################################
 
-    def calculate_volume(start_date, end_date):
-        sessions = Session.query.filter(Session.date >= start_date, Session.date <= end_date, Session.userid == current_user.id).all()
-        total_volume = 0
-        for session in sessions:
-            sets = Set.query.filter_by(session_id=session.id).all()
-            for set in sets:
-                total_volume += set.weight * set.reps
-        return total_volume
-    
-
-
-    @app.route('/volume', methods=['GET'])
-    def get_yearly_volume():
-        start_date, end_date = get_current_year_dates()
-        volume = calculate_volume(start_date, end_date)
-        return jsonify({'volume': volume})
-    
 
     
-    @app.route('/aggregate', methods=['GET'])
-    def aggregate_data():
-        period = request.args.get('period')  # week, month, or year
-        user_id = request.args.get('userid')
-        muscle_group = request.args.get('muscle_group')
-        exercise_name = request.args.get('exercise_name')
 
-        if not period:
-            return jsonify({'message': 'Period parameter is required'}), 400
-
-        if period == 'week':
-            period_str = '%Y-%W'
-        elif period == 'month':
-            period_str = '%Y-%m'
-        elif period == 'year':
-            period_str = '%Y'
-        else:
-            return jsonify({'message': 'Invalid period parameter'}), 400
-
-        query = db.session.query(
-            func.strftime(period_str, Session.date).label('period'),
-            func.sum(Set.weight * Set.reps).label('total_volume')
-        ).join(Exercise, Exercise.id == Set.exercise_id)\
-        .join(Session, Session.id == Exercise.session_id)\
-        .filter(Session.userid == user_id)
-
-        if muscle_group:
-            query = query.filter(Exercise.muscle_group == muscle_group)
-
-        if exercise_name:
-            query = query.filter(Exercise.name == exercise_name)
-
-        result = query.group_by('period').order_by('period').all()
-
-        data = [{'period': r.period, 'total_volume': r.total_volume} for r in result]
-        return jsonify(data)
-
-    @app.route('/all_logs', methods=['GET'])
-    def all_logs():
-        user_id = request.args.get('userid')
-        muscle_group = request.args.get('muscle_group')
-        exercise_name = request.args.get('exercise_name')
-
-        if not user_id:
-            return jsonify({'message': 'User ID parameter is required'}), 400
-
-        query = db.session.query(
-            Session.date,
-            func.sum(Set.weight * Set.reps).label('total_volume')
-        ).join(Exercise, Exercise.id == Set.exercise_id)\
-        .join(Session, Session.id == Exercise.session_id)\
-        .filter(Session.userid == user_id)
-
-        if muscle_group:
-            query = query.filter(Exercise.muscle_group == muscle_group)
-
-        if exercise_name:
-            query = query.filter(Exercise.name == exercise_name)
-
-        result = query.group_by(Session.date).order_by(Session.date).all()
-
-        data = [{'date': r.date.strftime('%Y-%m-%d'), 'total_volume': r.total_volume} for r in result]
-        return jsonify(data)
